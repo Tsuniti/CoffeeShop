@@ -2,9 +2,9 @@
 
 public class Order
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id  = Guid.NewGuid();
     public DateTime Time { get; set; } = DateTime.Now;
 
-    public Guid CoffeeId { get; set; }
-    public Coffee Coffee { get; set; }
+    public ICollection<OrdersToCoffees> OrdersToCoffees { get; set; } = new List<OrdersToCoffees>();
+
 }

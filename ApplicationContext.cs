@@ -8,6 +8,8 @@ public class ApplicationContext : DbContext
     public DbSet<Coffee> Coffees { get; set; }
     public DbSet<Order> Orders { get; set; }
     
+    public DbSet<OrdersToCoffees> OrdersToCoffees { get; set; }
+
     public ApplicationContext() => Database.EnsureCreated();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -15,6 +17,28 @@ public class ApplicationContext : DbContext
         modelBuilder.Entity<Coffee>()
             .HasIndex(c => c.Name)
             .IsUnique();
+
+        modelBuilder.Entity<Coffee>()
+            .HasKey(c =>  c.Id);
+
+        modelBuilder.Entity<Order>()
+            .HasKey(o =>  o.Id);
+
+        modelBuilder.Entity<OrdersToCoffees>()
+            .HasKey(otc =>  otc.Id);
+
+        modelBuilder.Entity<OrdersToCoffees>()
+            .HasIndex(otc => new { otc.OrderId, otc.CoffeeId });
+
+        modelBuilder.Entity<OrdersToCoffees>()
+            .HasOne(otc => otc.Order)
+            .WithMany(o => o.OrdersToCoffees)
+            .HasForeignKey(otc => otc.OrderId);
+        
+        modelBuilder.Entity<OrdersToCoffees>()
+            .HasOne(otc => otc.Coffee)
+            .WithMany(c => c.OrdersToCoffees)
+            .HasForeignKey(otc => otc.CoffeeId);
 
         modelBuilder.Entity<Coffee>().HasData(
 
@@ -39,20 +63,44 @@ public class ApplicationContext : DbContext
         await Coffees.AddAsync(new Coffee { Name = name, Price = price });
         await SaveChangesAsync();
     }
-    public async Task AddOrderAsync(string coffeeName)
+    public async Task AddOrderAsync(ICollection<string> coffeeNames)
     {
-        var tempCoffee = await Coffees.FirstOrDefaultAsync(c => c.Name == coffeeName);
-        
-        if (tempCoffee == null)
-            throw new ArgumentException(coffeeName + "not found");
-        
-        await Orders.AddAsync(new Order{ Coffee = tempCoffee});
+        var tempOrder = new Order();
+        foreach (var coffeeName in coffeeNames)
+        {
+            var tempCoffee = await Coffees.FirstOrDefaultAsync(c => c.Name == coffeeName);
+            if (tempCoffee == null)
+                throw new ArgumentException(coffeeName + "not found");
+            
+            
+            await OrdersToCoffees.AddAsync(new OrdersToCoffees
+            {
+                Coffee = tempCoffee,
+                Order = tempOrder
+            });
+        }
+
+        await Orders.AddAsync(tempOrder);
+
         await SaveChangesAsync();
+        
     }
 
-    public IEnumerable<Order> GetAllOrders() => Orders.Include(o => o.Coffee);
+    public async Task<IEnumerable<Order>> GetAllOrdersAsync()
+    {
+        return await Orders
+            .Include(o => o.OrdersToCoffees)
+            .ThenInclude(otc => otc.Coffee)
+            .ToListAsync();
+    }
 
-    public IEnumerable<Order> GetOrdersAfter(DateTime dateTime) => Orders.Where(o => o.Time > dateTime).Include(o => o.Coffee);
+    public IEnumerable<Order> GetOrdersAfter(DateTime dateTime)
+    {
+       return Orders
+            .Where(o => o.Time > dateTime)
+            .Include(o => o.OrdersToCoffees)
+            .ThenInclude(otc => otc.Coffee);
+    }
 
     public async Task DeleteOrder(string orderId)
     {

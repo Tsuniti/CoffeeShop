@@ -2,9 +2,9 @@
 
 public class Coffee
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id = Guid.NewGuid() ;
     public string Name { get; set; }
     public double Price { get; set; }
 
-    public ICollection<Order> Orders = new List<Order>();
+    public ICollection<OrdersToCoffees> OrdersToCoffees = new List<OrdersToCoffees>();
 }

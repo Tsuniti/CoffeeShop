@@ -47,12 +47,19 @@ public class CoffeeShopHttpListener
                         
                             buffer = new byte[request.ContentLength64];
                             await request.InputStream.ReadAsync(buffer, 0, buffer.Length);
-                            await db.AddOrderAsync(Encoding.UTF8.GetString(buffer));
+                            var names = Encoding.UTF8.GetString(buffer)
+                                .Replace(",", "")
+                                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                            foreach (var name in names)
+                            {
+                                Console.WriteLine(name);
+                            }
+                            await db.AddOrderAsync(names);
                             response.OutputStream.Close();
                             break;
 
                         case "/get-all/":
-                            responseBody = JsonProvider.Serialize(db.GetAllOrders());
+                            responseBody = JsonProvider.Serialize(await db.GetAllOrdersAsync());
                             bytes = Encoding.UTF8.GetBytes(responseBody);
 
                             await response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
