@@ -34,13 +34,14 @@ public class CoffeeShopHttpListener
         string responseBody = null;
         byte[] bytes = null;
 
-            using (var db = new ApplicationContext())
-            {
+            using (var db = new ApplicationContext()){
+            
             while (true)
             {
                 var httpContext = _httpListener.GetContext();
                 var request = httpContext.Request;
                 var response = httpContext.Response;
+
                 switch (request.Url.AbsolutePath)
                     {
                         case "/create/":
@@ -50,10 +51,6 @@ public class CoffeeShopHttpListener
                             var names = Encoding.UTF8.GetString(buffer)
                                 .Replace(",", "")
                                 .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                            foreach (var name in names)
-                            {
-                                Console.WriteLine(name);
-                            }
                             await db.AddOrderAsync(names);
                             response.OutputStream.Close();
                             break;
