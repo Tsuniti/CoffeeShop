@@ -63,14 +63,14 @@ public class ApplicationContext : DbContext
         await Coffees.AddAsync(new Coffee { Name = name, Price = price });
         await SaveChangesAsync();
     }
-    public async Task AddOrderAsync(ICollection<string> coffeeNames)
+    public async Task<bool> AddOrderAsync(ICollection<string> coffeeNames)
     {
         var tempOrder = new Order();
         foreach (var coffeeName in coffeeNames)
         {
             var tempCoffee = await Coffees.FirstOrDefaultAsync(c => c.Name == coffeeName);
             if (tempCoffee == null)
-                throw new ArgumentException(coffeeName + "not found");
+                return false;
             
             
             await OrdersToCoffees.AddAsync(new OrdersToCoffees
@@ -83,6 +83,7 @@ public class ApplicationContext : DbContext
         await Orders.AddAsync(tempOrder);
 
         await SaveChangesAsync();
+            return true;
         
     }
 
@@ -102,12 +103,16 @@ public class ApplicationContext : DbContext
             .ThenInclude(otc => otc.Coffee);
     }
 
-    public async Task DeleteOrder(string orderId)
+    public async Task<bool> DeleteOrderAsync(string orderId)
     {
         var tempOrder = await Orders.FirstOrDefaultAsync(o => o.Id == Guid.Parse(orderId));
+
         if (tempOrder == null)
-            throw new ArgumentException("Not found order with order id:" + orderId);
+            return false;
+
         Orders.Remove(tempOrder);
+        await SaveChangesAsync();
+        return true;
     }
 
 }

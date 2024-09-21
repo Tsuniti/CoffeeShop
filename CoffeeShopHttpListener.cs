@@ -22,20 +22,21 @@ public class CoffeeShopHttpListener
         _httpListener.Prefixes.Add(_serverUrl + "/delete/");
 
     }
-    
-    
+
+
     public async Task ListenAsync()
     {
 
         _httpListener.Start();
-            Console.WriteLine($"Server is listening {_port} port...");
+        Console.WriteLine($"Server is listening {_port} port...");
 
         byte[] buffer;
         string responseBody = null;
         byte[] bytes = null;
 
-            using (var db = new ApplicationContext()){
-            
+        using (var db = new ApplicationContext())
+        {
+
             while (true)
             {
                 var httpContext = _httpListener.GetContext();
@@ -43,27 +44,33 @@ public class CoffeeShopHttpListener
                 var response = httpContext.Response;
 
                 switch (request.Url.AbsolutePath)
-                    {
-                        case "/create/":
-                        
-                            buffer = new byte[request.ContentLength64];
-                            await request.InputStream.ReadAsync(buffer, 0, buffer.Length);
-                            var names = Encoding.UTF8.GetString(buffer)
-                                .Replace(",", "")
-                                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                            await db.AddOrderAsync(names);
-                            response.OutputStream.Close();
-                            break;
+                {
+                    case "/create/":
 
-                        case "/get-all/":
-                            responseBody = JsonProvider.Serialize(await db.GetAllOrdersAsync());
+                        buffer = new byte[request.ContentLength64];
+                        await request.InputStream.ReadAsync(buffer, 0, buffer.Length);
+                        var names = Encoding.UTF8.GetString(buffer)
+                            .Replace(",", "")
+                            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (!await db.AddOrderAsync(names))
+                        {
+                            responseBody = "Wrong coffee name or names";
                             bytes = Encoding.UTF8.GetBytes(responseBody);
 
                             await response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
-                            response.Close();
-                            break;
+                        };
+                        response.OutputStream.Close();
+                        break;
 
-                        case "/get-later/":
+                    case "/get-all/":
+                        responseBody = JsonProvider.Serialize(await db.GetAllOrdersAsync());
+                        bytes = Encoding.UTF8.GetBytes(responseBody);
+
+                        await response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
+                        response.Close();
+                        break;
+
+                    case "/get-later/":
 
                         buffer = new byte[request.ContentLength64];
                         await request.InputStream.ReadAsync(buffer, 0, buffer.Length);
@@ -85,9 +92,22 @@ public class CoffeeShopHttpListener
                         response.Close();
                         break;
 
-                        case "/delete/":
+                    case "/delete/":
+                        buffer = new byte[request.ContentLength64];
+                        await request.InputStream.ReadAsync(buffer, 0, buffer.Length);
+                        var id = Encoding.UTF8.GetString(buffer);
 
-                            break;
+                        if (!await db.DeleteOrderAsync(id))
+                        {
+                            responseBody = "Wrong id";
+                            bytes = Encoding.UTF8.GetBytes(responseBody);
+
+                            await response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
+                        };
+
+                        response.Close();
+
+                        break;
 
                     default:
                         responseBody = "Wrong path";
@@ -97,9 +117,9 @@ public class CoffeeShopHttpListener
                         response.Close();
                         break;
 
-                    }
                 }
             }
         }
-    
+    }
+
 }
